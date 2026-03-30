@@ -885,7 +885,7 @@ minicpm_series = {
     "MiniCPM-V": partial(vlm.MiniCPM_V, model_path="openbmb/MiniCPM-V"),
     "MiniCPM-V-2": partial(vlm.MiniCPM_V, model_path="openbmb/MiniCPM-V-2"),
     "MiniCPM-Llama3-V-2_5": partial(
-        vlm.MiniCPM_Llama3_V, model_path="openbmb/MiniCPM-Llama3-V-2_5"
+        vlm.MiniCPM_Llama3_V, model_path="openbmb/MiniCPM-Llama3-V-2_5", use_vllm=True
     ),
     "MiniCPM-V-2_6": partial(vlm.MiniCPM_V_2_6, model_path="openbmb/MiniCPM-V-2_6"),
     "MiniCPM-o-2_6": partial(vlm.MiniCPM_o_2_6, model_path="openbmb/MiniCPM-o-2_6"),
@@ -1392,10 +1392,22 @@ qwen3vl_series = {
     "Qwen3-VL-8B-Instruct": partial(
         vlm.Qwen3VLChat,
         model_path="Qwen/Qwen3-VL-8B-Instruct",
-        use_custom_prompt=False,
+        use_custom_prompt=True,
         use_vllm=True,
         temperature=0.7, 
-        max_new_tokens=16384,
+        max_new_tokens=512,
+        repetition_penalty=1.0,
+        presence_penalty=1.5,
+        top_p=0.8,
+        top_k=20
+    ),
+    "Qwen3-VL-8B-Instruct-ckpt1000": partial(
+        Qwen3VLChat,
+        model_path="/home/qqcat/attn_ft/hf_model-8B/checkpoint-1000",
+        use_custom_prompt=True,
+        use_vllm=True,
+        temperature=0.7, 
+        max_new_tokens=512,
         repetition_penalty=1.0,
         presence_penalty=1.5,
         top_p=0.8,
@@ -1416,10 +1428,34 @@ qwen3vl_series = {
     "Qwen3-VL-2B-Instruct": partial(
         vlm.Qwen3VLChat,
         model_path="Qwen/Qwen3-VL-2B-Instruct",
-        use_custom_prompt=False,
+        use_custom_prompt=True,
         use_vllm=True,
         temperature=0.7, 
-        max_new_tokens=16384,
+        max_new_tokens=512,
+        repetition_penalty=1.0,
+        presence_penalty=1.5,
+        top_p=0.8,
+        top_k=20
+    ),
+    "Qwen3-VL-2B-Instruct-ckpt0": partial(
+        Qwen3VLChat,
+        model_path="/home/qqcat/attn_ft/hf_model-2B/checkpoint-0",
+        use_custom_prompt=True,
+        use_vllm=True,
+        temperature=0.7, 
+        max_new_tokens=512,
+        repetition_penalty=1.0,
+        presence_penalty=1.5,
+        top_p=0.8,
+        top_k=20
+    ),
+    "Qwen3-VL-2B-Instruct-ckpt100": partial(
+        Qwen3VLChat,
+        model_path="/home/qqcat/attn_ft/hf_model-2B/checkpoint-100",
+        use_custom_prompt=True,
+        use_vllm=True,
+        temperature=0.7, 
+        max_new_tokens=512,
         repetition_penalty=1.0,
         presence_penalty=1.5,
         top_p=0.8,

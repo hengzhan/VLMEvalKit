@@ -136,6 +136,7 @@ class Qwen3VLChat(Qwen3VLPromptMixin, BaseModel):
             self.llm = LLM(
                 model=self.model_path,
                 max_num_seqs=8,
+                max_model_len = 16000, # setting a smaller max_model_len to avoid OOM, since we already control the max new tokens via max_new_tokens
                 limit_mm_per_prompt=limit_mm,
                 tensor_parallel_size=tp_size,
                 enable_expert_parallel=enable_expert_parallel,

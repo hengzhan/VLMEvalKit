@@ -104,9 +104,6 @@ class MiniCPM_Llama3_V(BaseModel):
         assert model_path is not None
         self.model_path = model_path
         print(f'load from {self.model_path}')
-        self.model = AutoModel.from_pretrained(self.model_path, trust_remote_code=True)
-        self.model = self.model.to(dtype=torch.float16)
-        self.model.eval().cuda()
         self.kwargs = kwargs
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True)
         torch.cuda.empty_cache()
@@ -117,7 +114,32 @@ class MiniCPM_Llama3_V(BaseModel):
         self.wo_options_system_prompt = 'Carefully read the following question Answer the question directly.'
         self.detail_system_prompt = 'Answer this question in detail.'
         self.vqa_prompt = 'Answer the question using a single word or phrase.'
+        self.use_vllm = kwargs.get('use_vllm', False)
+        os.environ['VLLM_WORKER_MULTIPROC_METHOD'] = 'spawn'
+        if self.use_vllm:
+            from vllm import LLM
+            gpu_count = torch.cuda.device_count()
+            tp_size = gpu_count if gpu_count > 0 else 1
+            logging.info(
+                f'Using vLLM for {self.model_path} inference with {tp_size} GPUs (available: {gpu_count})'
+            )
+            if os.environ.get('VLLM_WORKER_MULTIPROC_METHOD') != 'spawn':
+                logging.warning(
+                    "VLLM_WORKER_MULTIPROC_METHOD is not set to spawn. Use 'export VLLM_WORKER_MULTIPROC_METHOD=spawn'"
+                )
 
+            self.model = LLM(
+                model=self.model_path,
+                max_num_seqs=8,
+                tensor_parallel_size=tp_size,
+                seed=0,
+                gpu_memory_utilization=kwargs.get("gpu_utils", 0.9),
+                trust_remote_code=True,
+            )
+        else:
+            self.model = AutoModel.from_pretrained(self.model_path, trust_remote_code=True)
+            self.model = self.model.to(dtype=torch.float16)
+            self.model.eval().cuda()
     def use_custom_prompt(self, dataset):
         if listinstr(['MCQ', 'VQA'], DATASET_TYPE(dataset)):
             return True
@@ -210,13 +232,25 @@ class MiniCPM_Llama3_V(BaseModel):
                 content.append(image)
         msgs = [{'role': 'user', 'content': content}]
 
-        res = self.model.chat(
-            msgs=msgs,
-            context=None,
-            image=None,
-            tokenizer=self.tokenizer,
-            **default_kwargs
-        )
+        if self.use_vllm:
+            from vllm import SamplingParams
+            sampling_params = SamplingParams(
+                temperature=0,
+                max_tokens=max_new_tokens,
+                top_p=1.0,
+                top_k=0
+            )
+            text = self.tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+            prompt_dict = {"prompt":text}
+            res = self.model.generate([prompt_dict],sampling_params=sampling_params)
+        else:
+            res = self.model.chat(
+                msgs=msgs,
+                context=None,
+                image=None,
+                tokenizer=self.tokenizer,
+                **default_kwargs
+            )
 
         if isinstance(res, tuple) and len(res) > 0:
             res = res[0]
