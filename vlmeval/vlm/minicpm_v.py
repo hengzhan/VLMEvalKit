@@ -236,13 +236,12 @@ class MiniCPM_Llama3_V(BaseModel):
             from vllm import SamplingParams
             sampling_params = SamplingParams(
                 temperature=0,
-                max_tokens=max_new_tokens,
-                top_p=1.0,
-                top_k=0
+                max_tokens=max_new_tokens
             )
             text = self.tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
             prompt_dict = {"prompt":text}
             res = self.model.generate([prompt_dict],sampling_params=sampling_params)
+            res = res[0].outputs[0].text
         else:
             res = self.model.chat(
                 msgs=msgs,

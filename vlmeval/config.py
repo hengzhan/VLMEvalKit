@@ -1401,18 +1401,6 @@ qwen3vl_series = {
         top_p=0.8,
         top_k=20
     ),
-    "Qwen3-VL-8B-Instruct-ckpt1000": partial(
-        Qwen3VLChat,
-        model_path="/home/qqcat/attn_ft/hf_model-8B/checkpoint-1000",
-        use_custom_prompt=True,
-        use_vllm=True,
-        temperature=0.7, 
-        max_new_tokens=512,
-        repetition_penalty=1.0,
-        presence_penalty=1.5,
-        top_p=0.8,
-        top_k=20
-    ),
     "Qwen3-VL-4B-Instruct": partial(
         vlm.Qwen3VLChat,
         model_path="Qwen/Qwen3-VL-4B-Instruct",
@@ -1428,30 +1416,6 @@ qwen3vl_series = {
     "Qwen3-VL-2B-Instruct": partial(
         vlm.Qwen3VLChat,
         model_path="Qwen/Qwen3-VL-2B-Instruct",
-        use_custom_prompt=True,
-        use_vllm=True,
-        temperature=0.7, 
-        max_new_tokens=512,
-        repetition_penalty=1.0,
-        presence_penalty=1.5,
-        top_p=0.8,
-        top_k=20
-    ),
-    "Qwen3-VL-2B-Instruct-ckpt0": partial(
-        Qwen3VLChat,
-        model_path="/home/qqcat/attn_ft/hf_model-2B/checkpoint-0",
-        use_custom_prompt=True,
-        use_vllm=True,
-        temperature=0.7, 
-        max_new_tokens=512,
-        repetition_penalty=1.0,
-        presence_penalty=1.5,
-        top_p=0.8,
-        top_k=20
-    ),
-    "Qwen3-VL-2B-Instruct-ckpt100": partial(
-        Qwen3VLChat,
-        model_path="/home/qqcat/attn_ft/hf_model-2B/checkpoint-100",
         use_custom_prompt=True,
         use_vllm=True,
         temperature=0.7, 
