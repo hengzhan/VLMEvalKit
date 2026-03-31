@@ -130,7 +130,7 @@ class MiniCPM_Llama3_V(BaseModel):
 
             self.model = LLM(
                 model=self.model_path,
-                max_num_seqs=8,
+                max_num_seqs=1,
                 tensor_parallel_size=tp_size,
                 seed=0,
                 gpu_memory_utilization=kwargs.get("gpu_utils", 0.9),
@@ -215,34 +215,43 @@ class MiniCPM_Llama3_V(BaseModel):
             max_new_tokens = 3
         else:
             max_new_tokens = 1024
-
-        default_kwargs = dict(
-            max_new_tokens=max_new_tokens,
-            sampling=False,
-            num_beams=self.num_beams,
-        )
-        default_kwargs.update(self.kwargs)
-
+            
         content = []
+        images = []
         for x in message:
             if x['type'] == 'text':
                 content.append(x['value'])
             elif x['type'] == 'image':
                 image = Image.open(x['value']).convert('RGB')
-                content.append(image)
+                if self.use_vllm:
+                    images.append(image)
+                    img_placeholder = '(<image>./</image>)\n'
+                    content.append(img_placeholder)
+                else:
+                    content.append(image)
         msgs = [{'role': 'user', 'content': content}]
-
         if self.use_vllm:
             from vllm import SamplingParams
             sampling_params = SamplingParams(
                 temperature=0,
-                max_tokens=max_new_tokens
+                top_k=1,
+                max_tokens=max_new_tokens,
+                stop_token_ids=[self.tokenizer.eos_id, self.tokenizer.eot_id]
             )
             text = self.tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
             prompt_dict = {"prompt":text}
+            if images:
+                prompt_dict['multi_modal_data'] = {"image": images}
             res = self.model.generate([prompt_dict],sampling_params=sampling_params)
             res = res[0].outputs[0].text
         else:
+            default_kwargs = dict(
+                max_new_tokens=max_new_tokens,
+                sampling=False,
+                num_beams=self.num_beams,
+            )
+            default_kwargs.update(self.kwargs)
+
             res = self.model.chat(
                 msgs=msgs,
                 context=None,
