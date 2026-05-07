@@ -5,7 +5,7 @@ apted>=1.0.3
 bert_score
 cairosvg
 colormath>=3.0.0
-datasets
+datasets==4.8.5
 decord>=0.6.0
 distance>=0.1.3
 dotenv
@@ -57,11 +57,12 @@ tiktoken
 timeout-decorator
 timm
 torch
+https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.9.0/flash_attn-2.8.3+cu128torch2.10-cp310-cp310-linux_x86_64.whl
 # For SArena
 torchmetrics
 torchvision
 tqdm
-transformers==4.56.0
+transformers==4.57.0
 typing_extensions
 validators
 xlsxwriter

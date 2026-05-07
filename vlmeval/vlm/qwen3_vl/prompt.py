@@ -118,7 +118,9 @@ class Qwen3VLPromptMixin:
         prompt += f'Question: {question}\n'
         if len(options):
             prompt += options_prompt
-            prompt += 'Answer with the option letter only.'
+            prompt += "Please think step by step about what you observe in the image, then select the correct answer from the options above. \n"
+
+            # prompt += 'Answer with the option letter only.'
         prompt = prompt.rstrip()
 
         msgs = []

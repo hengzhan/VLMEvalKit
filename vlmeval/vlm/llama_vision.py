@@ -1,5 +1,7 @@
 import logging
+import sys
 import string
+from pathlib import Path
 
 import pandas as pd
 import torch
@@ -9,13 +11,34 @@ from vlmeval.dataset import DATASET_TYPE
 from vlmeval.smp import listinstr
 from .base import BaseModel
 
+# MemVR support
+_memvr_import_error = None
+try:
+    _eval_dir = Path(__file__).resolve().parents[3]
+    if str(_eval_dir) not in sys.path:
+        sys.path.insert(0, str(_eval_dir))
+    from memvr import apply_memvr_to_loaded_model
+    _memvr_available = True
+except (ImportError, ModuleNotFoundError) as exc:
+    _memvr_import_error = exc
+    _memvr_available = False
+
 
 class llama_vision(BaseModel):
 
     INSTALL_REQ = False
     INTERLEAVE = True
 
-    def __init__(self, model_path='meta-llama/Llama-3.2-11B-Vision-Instruct', **kwargs):
+    def __init__(
+        self,
+        model_path='meta-llama/Llama-3.2-11B-Vision-Instruct',
+        apply_memvr: bool = False,
+        memvr_starting_layer: int = 5,
+        memvr_ending_layer: int = 16,
+        memvr_entropy_threshold: float = 0.75,
+        memvr_retracing_ratio: float = 0.0,
+        **kwargs,
+    ):
         try:
             from transformers import AutoProcessor, MllamaForConditionalGeneration
         except Exception as e:
@@ -27,6 +50,29 @@ class llama_vision(BaseModel):
             torch_dtype=torch.bfloat16,
             device_map="auto",
         ).eval()
+
+        if apply_memvr:
+            if _memvr_available:
+                try:
+                    apply_memvr_to_loaded_model(
+                        self.model,
+                        starting_layer=memvr_starting_layer,
+                        ending_layer=memvr_ending_layer,
+                        entropy_threshold=memvr_entropy_threshold,
+                        retracing_ratio=memvr_retracing_ratio,
+                    )
+                    logging.info(
+                        f"MemVR enabled for {model_path} "
+                        f"(layers {memvr_starting_layer}-{memvr_ending_layer}, "
+                        f"entropy_threshold={memvr_entropy_threshold})"
+                    )
+                except Exception as exc:
+                    logging.warning(f"Failed to apply MemVR patches: {exc}")
+            else:
+                logging.warning(
+                    "MemVR requested but memvr module not available. Proceeding without MemVR. "
+                    f"Import error: {_memvr_import_error}"
+                )
 
         self.device = 'cuda'
         self.processor = AutoProcessor.from_pretrained(model_path)

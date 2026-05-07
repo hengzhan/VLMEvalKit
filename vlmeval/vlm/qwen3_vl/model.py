@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import os
+import sys
 import warnings
 
 import torch
@@ -8,6 +9,19 @@ import torch
 from vlmeval.smp import get_gpu_memory, listinstr
 from ..base import BaseModel
 from .prompt import Qwen3VLPromptMixin
+
+# MemVR support
+_memvr_import_error = None
+try:
+    from pathlib import Path
+    _eval_dir = Path(__file__).resolve().parents[4]
+    if str(_eval_dir) not in sys.path:
+        sys.path.insert(0, str(_eval_dir))
+    from memvr import apply_memvr_to_loaded_model
+    _memvr_available = True
+except (ImportError, ModuleNotFoundError) as exc:
+    _memvr_import_error = exc
+    _memvr_available = False
 
 VLLM_MAX_IMAGE_INPUT_NUM = 24
 
@@ -60,6 +74,11 @@ class Qwen3VLChat(Qwen3VLPromptMixin, BaseModel):
         post_process: bool = False,
         verbose: bool = False,
         use_audio_in_video: bool = True,
+        apply_memvr: bool = False,
+        memvr_starting_layer: int = 5,
+        memvr_ending_layer: int = 16,
+        memvr_entropy_threshold: float = 0.75,
+        memvr_retracing_ratio: float = 0.0,
         **kwargs,
     ) -> None:
         super().__init__(use_custom_prompt=use_custom_prompt)
@@ -154,6 +173,30 @@ class Qwen3VLChat(Qwen3VLPromptMixin, BaseModel):
                     model_path, torch_dtype='auto', device_map='auto', attn_implementation='flash_attention_2'
                 )
             self.model.eval()
+
+            # Apply MemVR patches if requested.
+            if apply_memvr:
+                if _memvr_available:
+                    try:
+                        apply_memvr_to_loaded_model(
+                            self.model,
+                            starting_layer=memvr_starting_layer,
+                            ending_layer=memvr_ending_layer,
+                            entropy_threshold=memvr_entropy_threshold,
+                            retracing_ratio=memvr_retracing_ratio,
+                        )
+                        logging.info(
+                            f"MemVR enabled for {model_path} "
+                            f"(layers {memvr_starting_layer}-{memvr_ending_layer}, "
+                            f"entropy_threshold={memvr_entropy_threshold})"
+                        )
+                    except Exception as exc:
+                        logging.warning(f"Failed to apply MemVR patches: {exc}")
+                else:
+                    logging.warning(
+                        "MemVR requested but memvr module not available. Proceeding without MemVR. "
+                        f"Import error: {_memvr_import_error}"
+                    )
 
         torch.cuda.empty_cache()
 
